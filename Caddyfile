@@ -1,0 +1,29 @@
+:80 {
+	# LMS Service - Courses, Quizzes, Certificates
+	reverse_proxy /api/lms/* lms-service:8083
+
+	# Marketing Service - Funnels, E-commerce, Email
+	reverse_proxy /api/marketing/* marketing-service:8082
+
+	# Marketing-owned /api/tenant/* paths (must be before the /api/tenant/* catchall below)
+	reverse_proxy /api/tenant/funnels* marketing-service:8082
+	reverse_proxy /api/tenant/products* marketing-service:8082
+	reverse_proxy /api/tenant/offers* marketing-service:8082
+	reverse_proxy /api/tenant/coupons* marketing-service:8082
+	reverse_proxy /api/tenant/purchases* marketing-service:8082
+	reverse_proxy /api/tenant/assets* marketing-service:8082
+	reverse_proxy /api/tenant/contacts* marketing-service:8082
+
+	# Customer-facing routes (library, etc.) live in marketing-service
+	reverse_proxy /api/customer/* marketing-service:8082
+
+	# Marketing-owned legacy paths
+	reverse_proxy /api/funnel/* marketing-service:8082
+
+	# Video Service - Video tracking, Media intelligence
+	reverse_proxy /api/video/* video-service:8084
+
+	# Core Service - Tenant auth, Domains, Scripting, Story builder
+	# Fallback for all other /api/* routes.
+	reverse_proxy /api/* core-service:8081
+}

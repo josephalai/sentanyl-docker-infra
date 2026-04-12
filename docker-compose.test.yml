@@ -1,0 +1,64 @@
+version: "3.8"
+
+# docker-compose.test.yml — spins up test infrastructure and runs the full test suite.
+#
+# USAGE:
+#   docker compose -f docker-compose.test.yml up --build --abort-on-container-exit
+#
+# The 'test' service exits with the Go test exit code, which propagates to the
+# host via --abort-on-container-exit.
+
+services:
+  mongo-test:
+    image: mongo:6
+    container_name: sntl-mongo-test
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_DATABASE: sentanyl_integration_test
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    ports:
+      - "27018:27017"
+
+  redis-test:
+    image: redis:7-alpine
+    container_name: sntl-redis-test
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      retries: 10
+    ports:
+      - "6380:6379"
+
+  test:
+    image: golang:1.25
+    container_name: sntl-test-runner
+    working_dir: /app
+    volumes:
+      - .:/app
+    environment:
+      MONGO_HOST: mongo-test
+      MONGO_PORT: "27017"
+      REDIS_HOST: redis-test
+      REDIS_PORT: "6379"
+      GIN_MODE: test
+    depends_on:
+      mongo-test:
+        condition: service_healthy
+      redis-test:
+        condition: service_healthy
+    command: >
+      sh -c "
+        go test -v -timeout 60s ./core-service/scripting/... &&
+        go test -v -timeout 60s ./core-service/cmd/...
+      "
+      # NOTE: tests/unit/ and tests/integration/ reference sentanyl/story/sentanyl
+      # which was migrated into core-service/ during the macroservice refactor.
+      # Those test packages need to be rewritten against the macroservice APIs.
+
+x-exit-code-from:
+  test

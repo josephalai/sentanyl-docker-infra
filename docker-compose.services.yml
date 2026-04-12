@@ -1,0 +1,173 @@
+version: "3.8"
+
+services:
+  mongo:
+    image: mongo:6
+    container_name: sntl-mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    networks:
+      - sentanyl
+
+  redis:
+    image: redis:7-alpine
+    container_name: sntl-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      retries: 10
+    networks:
+      - sentanyl
+
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: sntl-mailhog
+    restart: unless-stopped
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+    networks:
+      - sentanyl
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: sntl-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+    depends_on:
+      - core-service
+      - marketing-service
+      - lms-service
+      - video-service
+    networks:
+      - sentanyl
+
+  core-service:
+    build:
+      context: .
+      dockerfile: core-service/Dockerfile
+    container_name: sntl-core
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    environment:
+      - HTTP_PORT=8081
+      - MONGO_HOST=mongo
+      - MONGO_PORT=27017
+      - MONGO_DB=sentanyl_db
+      - MONGO_ENV=docker
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - LMS_SERVICE_URL=http://lms-service:8083
+      - MARKETING_SERVICE_URL=http://marketing-service:8082
+      - SMTP_HOST=mailhog
+      - SMTP_PORT=1025
+      - PUBLIC_BASE_URL=http://localhost
+    depends_on:
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - sentanyl
+
+  marketing-service:
+    build:
+      context: .
+      dockerfile: marketing-service/Dockerfile
+    container_name: sntl-marketing
+    restart: unless-stopped
+    ports:
+      - "8082:8082"
+    environment:
+      - HTTP_PORT=8082
+      - MONGO_HOST=mongo
+      - MONGO_PORT=27017
+      - MONGO_DB=sentanyl_db
+      - MONGO_ENV=docker
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - EMAIL_PROVIDER=smtp
+      - SMTP_HOST=mailhog
+      - SMTP_PORT=1025
+      - CORE_SERVICE_URL=http://core-service:8081
+    depends_on:
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      mailhog:
+        condition: service_started
+    networks:
+      - sentanyl
+
+  lms-service:
+    build:
+      context: .
+      dockerfile: lms-service/Dockerfile
+    container_name: sntl-lms
+    restart: unless-stopped
+    ports:
+      - "8083:8083"
+    environment:
+      - HTTP_PORT=8083
+      - MONGO_HOST=mongo
+      - MONGO_PORT=27017
+      - MONGO_DB=sentanyl_db
+      - MONGO_ENV=docker
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    depends_on:
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - sentanyl
+
+  video-service:
+    build:
+      context: .
+      dockerfile: video-service/Dockerfile
+    container_name: sntl-video
+    restart: unless-stopped
+    ports:
+      - "8084:8084"
+    environment:
+      - HTTP_PORT=8084
+      - MONGO_HOST=mongo
+      - MONGO_PORT=27017
+      - MONGO_DB=sentanyl_db
+      - MONGO_ENV=docker
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - GCP_PROJECT_ID=sentanyl
+    depends_on:
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - sentanyl
+
+volumes:
+  mongo-data:
+
+networks:
+  sentanyl:
+    driver: bridge
