@@ -1,3 +1,11 @@
+# Global options for on-demand TLS certificate issuance.
+# Caddy asks marketing-service to validate custom domains before issuing certs.
+{
+	on_demand_tls {
+		ask http://marketing-service:8082/internal/domain/check
+	}
+}
+
 :80 {
 	# LMS Service - Courses, Quizzes, Certificates
 	reverse_proxy /api/lms/* lms-service:8083
@@ -13,6 +21,7 @@
 	reverse_proxy /api/tenant/purchases* marketing-service:8082
 	reverse_proxy /api/tenant/assets* marketing-service:8082
 	reverse_proxy /api/tenant/contacts* marketing-service:8082
+	reverse_proxy /api/tenant/sites* marketing-service:8082
 
 	# Customer-facing routes (library, etc.) live in marketing-service
 	reverse_proxy /api/customer/* marketing-service:8082
@@ -26,4 +35,82 @@
 	# Core Service - Tenant auth, Domains, Scripting, Story builder
 	# Fallback for all other /api/* routes.
 	reverse_proxy /api/* core-service:8081
+}
+
+# Website public delivery — designated website hosts only.
+# Each tenant website host routes to marketing-service for published page serving.
+# These are additive blocks and do NOT affect the default :80 frontend host above.
+*.site.lvh.me {
+	# Allow website hosts to reach necessary API routes.
+	reverse_proxy /api/marketing/* marketing-service:8082 {
+		header_up X-Forwarded-Host {host}
+		header_up X-Forwarded-Proto {scheme}
+	}
+	reverse_proxy /api/customer/* marketing-service:8082 {
+		header_up X-Forwarded-Host {host}
+		header_up X-Forwarded-Proto {scheme}
+	}
+	reverse_proxy /api/funnel/* marketing-service:8082 {
+		header_up X-Forwarded-Host {host}
+		header_up X-Forwarded-Proto {scheme}
+	}
+	reverse_proxy /api/video/* video-service:8084 {
+		header_up X-Forwarded-Host {host}
+		header_up X-Forwarded-Proto {scheme}
+	}
+	reverse_proxy /api/* core-service:8081 {
+		header_up X-Forwarded-Host {host}
+		header_up X-Forwarded-Proto {scheme}
+	}
+
+	# Rewrite all non-API paths to the public site page resolver.
+	@notapi not path /api/*
+	rewrite @notapi /api/marketing/site/page?domain={host}&path={uri}
+	reverse_proxy @notapi marketing-service:8082 {
+		header_up X-Forwarded-Host {host}
+		header_up X-Forwarded-Proto {scheme}
+	}
+}
+
+# Custom domain support — on-demand TLS for verified tenant website domains.
+# Caddy will ask marketing-service whether a hostname is authorized before
+# issuing a certificate. Only verified, attached custom domains will be served.
+# This block does NOT affect the default :80 host or the dev *.site.lvh.me host.
+https:// {
+	tls {
+		on_demand
+	}
+
+	# Only serve if the internal domain check passes.
+	# Caddy's on_demand_tls ask verifies the domain before certificate issuance.
+
+	# Allow website hosts to reach necessary API routes.
+	reverse_proxy /api/marketing/* marketing-service:8082 {
+		header_up X-Forwarded-Host {host}
+		header_up X-Forwarded-Proto {scheme}
+	}
+	reverse_proxy /api/customer/* marketing-service:8082 {
+		header_up X-Forwarded-Host {host}
+		header_up X-Forwarded-Proto {scheme}
+	}
+	reverse_proxy /api/funnel/* marketing-service:8082 {
+		header_up X-Forwarded-Host {host}
+		header_up X-Forwarded-Proto {scheme}
+	}
+	reverse_proxy /api/video/* video-service:8084 {
+		header_up X-Forwarded-Host {host}
+		header_up X-Forwarded-Proto {scheme}
+	}
+	reverse_proxy /api/* core-service:8081 {
+		header_up X-Forwarded-Host {host}
+		header_up X-Forwarded-Proto {scheme}
+	}
+
+	# Rewrite all non-API paths to the public site page resolver.
+	@notapi not path /api/*
+	rewrite @notapi /api/marketing/site/page?domain={host}&path={uri}
+	reverse_proxy @notapi marketing-service:8082 {
+		header_up X-Forwarded-Host {host}
+		header_up X-Forwarded-Proto {scheme}
+	}
 }

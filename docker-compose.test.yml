@@ -10,13 +10,13 @@ version: "3.8"
 
 services:
   mongo-test:
-    image: mongo:6
+    image: mongo:5.0
     container_name: sntl-mongo-test
     restart: unless-stopped
     environment:
       MONGO_INITDB_DATABASE: sentanyl_integration_test
     healthcheck:
-      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      test: ["CMD", "mongo", "--quiet", "--eval", "db.adminCommand('ping')"]
       interval: 5s
       timeout: 5s
       retries: 12

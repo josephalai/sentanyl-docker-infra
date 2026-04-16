@@ -10,7 +10,7 @@ version: "3.8"
 
 services:
   mongo:
-    image: mongo:6
+    image: mongo:5.0
     container_name: sntl-mongo
     restart: unless-stopped
     ports:
@@ -18,7 +18,7 @@ services:
     volumes:
       - mongo-data:/data/db
     healthcheck:
-      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      test: ["CMD", "mongo", "--quiet", "--eval", "db.adminCommand('ping')"]
       interval: 5s
       timeout: 5s
       retries: 12
@@ -87,6 +87,7 @@ services:
       - SMTP_HOST=mailhog
       - SMTP_PORT=1025
       - PUBLIC_BASE_URL=http://localhost
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
     command: go run ./core-service/cmd/...
     depends_on:
       mongo:

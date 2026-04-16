@@ -20,7 +20,7 @@ version: "3.8"
 
 services:
   mongo:
-    image: mongo:6
+    image: mongo:5.0
     container_name: sntl-mongo
     restart: unless-stopped
     ports:
@@ -28,7 +28,7 @@ services:
     volumes:
       - sntl-mongo-data:/data/db
     healthcheck:
-      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      test: ["CMD", "mongo", "--quiet", "--eval", "db.adminCommand('ping')"]
       interval: 5s
       timeout: 5s
       retries: 12
