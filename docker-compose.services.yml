@@ -135,6 +135,14 @@ services:
       - MONGO_ENV=docker
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+      # LLM provider for course generation. Leave LLM_PROVIDER unset to let
+      # the service auto-detect from whichever API key is present; set it
+      # explicitly to force a choice ("openai", "anthropic", "none").
+      - LLM_PROVIDER=${LLM_PROVIDER:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - OPENAI_MODEL=${OPENAI_MODEL:-gpt-4o}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - ANTHROPIC_MODEL=${ANTHROPIC_MODEL:-claude-sonnet-4-6}
     depends_on:
       mongo:
         condition: service_healthy
