@@ -176,6 +176,8 @@ services:
     restart: unless-stopped
     ports:
       - "8084:8084"
+    volumes:
+      - ./sentanyl-gcs-key.json:/app/sentanyl-gcs-key.json:ro
     environment:
       - HTTP_PORT=8084
       - MONGO_HOST=mongo
@@ -184,7 +186,10 @@ services:
       - MONGO_ENV=docker
       - REDIS_HOST=redis
       - REDIS_PORT=6379
-      - GCP_PROJECT_ID=sentanyl
+      - GCP_PROJECT_ID=${GCS_PROJECT_ID:-sendhero}
+      - GCS_PROJECT_ID=${GCS_PROJECT_ID:-sendhero}
+      - GCS_BUCKET=${GCS_BUCKET:-sendhero-videos}
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/sentanyl-gcs-key.json
     depends_on:
       mongo:
         condition: service_healthy
