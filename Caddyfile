@@ -22,6 +22,10 @@
 	reverse_proxy /api/tenant/assets* marketing-service:8082
 	reverse_proxy /api/tenant/contacts* marketing-service:8082
 	reverse_proxy /api/tenant/sites* marketing-service:8082
+	reverse_proxy /api/tenant/forms* marketing-service:8082
+	reverse_proxy /api/tenant/email-ai* marketing-service:8082
+	reverse_proxy /api/tenant/funnel-ai* marketing-service:8082
+	reverse_proxy /api/tenant/site-themes* marketing-service:8082
 
 	# Customer-facing routes (library, etc.) live in marketing-service
 	reverse_proxy /api/customer/* marketing-service:8082
@@ -35,6 +39,10 @@
 	# Core Service - Tenant auth, Domains, Scripting, Story builder
 	# Fallback for all other /api/* routes.
 	reverse_proxy /api/* core-service:8081
+
+	# Frontend SPA — serve the React app for all non-API requests.
+	# nginx handles SPA fallback (all routes return index.html).
+	reverse_proxy /* frontend:80
 }
 
 # Website public delivery — designated website hosts only.

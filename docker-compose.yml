@@ -55,6 +55,18 @@ services:
     networks:
       - sentanyl
 
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        # Empty string = same-origin; Caddy on :80 routes /api/* to services.
+        VITE_API_URL: ""
+    container_name: sntl-frontend
+    restart: unless-stopped
+    networks:
+      - sentanyl
+
   caddy:
     image: caddy:2-alpine
     container_name: sntl-caddy
@@ -69,6 +81,7 @@ services:
       - marketing-service
       - lms-service
       - video-service
+      - frontend
     networks:
       - sentanyl
 
@@ -195,6 +208,30 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    networks:
+      - sentanyl
+
+  crawler:
+    build:
+      context: ./crawler
+      dockerfile: Dockerfile
+    container_name: sntl-crawler
+    profiles:
+      - crawl
+    environment:
+      - BASE_URL=http://caddy
+      - API_BASE=http://caddy
+      - CRAWL_EMAIL=crawler@sentanyl-test.local
+      - CRAWL_PASSWORD=CrawlerPass1!
+      - CRAWL_BUSINESS=Crawler Test Co
+      - CRAWL_LOGIN=1
+      # Set CRAWL_MODE=api-only to skip browser crawl and just check API endpoints
+      - CRAWL_MODE=${CRAWL_MODE:-full}
+    volumes:
+      - ./crawler:/app
+      - /app/node_modules
+    depends_on:
+      - caddy
     networks:
       - sentanyl
 
