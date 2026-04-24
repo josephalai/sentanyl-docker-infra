@@ -1,0 +1,8 @@
+{
+  "name": "sentanyl-e2e-scripts",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "puppeteer": "^24.42.0"
+  }
+}
