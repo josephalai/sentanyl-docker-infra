@@ -27,6 +27,10 @@
 	reverse_proxy /api/tenant/funnel-ai* marketing-service:8082
 	reverse_proxy /api/tenant/site-themes* marketing-service:8082
 
+	# Customer auth lives in core-service (alongside tenant auth + domain resolution).
+	reverse_proxy /api/customer/login core-service:8081
+	reverse_proxy /api/customer/set-password core-service:8081
+
 	# Customer-facing routes (library, etc.) live in marketing-service
 	reverse_proxy /api/customer/* marketing-service:8082
 
@@ -48,9 +52,18 @@
 # Website public delivery — designated website hosts only.
 # Each tenant website host routes to marketing-service for published page serving.
 # These are additive blocks and do NOT affect the default :80 frontend host above.
-*.site.lvh.me {
+http://*.site.lvh.me {
 	# Allow website hosts to reach necessary API routes.
 	reverse_proxy /api/marketing/* marketing-service:8082 {
+		header_up X-Forwarded-Host {host}
+		header_up X-Forwarded-Proto {scheme}
+	}
+	# Customer auth lives in core-service.
+	reverse_proxy /api/customer/login core-service:8081 {
+		header_up X-Forwarded-Host {host}
+		header_up X-Forwarded-Proto {scheme}
+	}
+	reverse_proxy /api/customer/set-password core-service:8081 {
 		header_up X-Forwarded-Host {host}
 		header_up X-Forwarded-Proto {scheme}
 	}
@@ -71,8 +84,18 @@
 		header_up X-Forwarded-Proto {scheme}
 	}
 
+	# Customer portal (Login / Library / ProductView / SetPassword) served by
+	# the library SPA on the frontend container.
+	reverse_proxy /portal/* frontend:80 {
+		header_up X-Forwarded-Host {host}
+		header_up X-Forwarded-Proto {scheme}
+	}
+
 	# Rewrite all non-API paths to the public site page resolver.
-	@notapi not path /api/*
+	@notapi {
+		not path /api/*
+		not path /portal/*
+	}
 	rewrite @notapi /api/marketing/site/page?domain={host}&path={uri}
 	reverse_proxy @notapi marketing-service:8082 {
 		header_up X-Forwarded-Host {host}
@@ -97,6 +120,15 @@ https:// {
 		header_up X-Forwarded-Host {host}
 		header_up X-Forwarded-Proto {scheme}
 	}
+	# Customer auth lives in core-service.
+	reverse_proxy /api/customer/login core-service:8081 {
+		header_up X-Forwarded-Host {host}
+		header_up X-Forwarded-Proto {scheme}
+	}
+	reverse_proxy /api/customer/set-password core-service:8081 {
+		header_up X-Forwarded-Host {host}
+		header_up X-Forwarded-Proto {scheme}
+	}
 	reverse_proxy /api/customer/* marketing-service:8082 {
 		header_up X-Forwarded-Host {host}
 		header_up X-Forwarded-Proto {scheme}
@@ -114,8 +146,17 @@ https:// {
 		header_up X-Forwarded-Proto {scheme}
 	}
 
+	# Customer portal (library SPA) on custom domains.
+	reverse_proxy /portal/* frontend:80 {
+		header_up X-Forwarded-Host {host}
+		header_up X-Forwarded-Proto {scheme}
+	}
+
 	# Rewrite all non-API paths to the public site page resolver.
-	@notapi not path /api/*
+	@notapi {
+		not path /api/*
+		not path /portal/*
+	}
 	rewrite @notapi /api/marketing/site/page?domain={host}&path={uri}
 	reverse_proxy @notapi marketing-service:8082 {
 		header_up X-Forwarded-Host {host}
