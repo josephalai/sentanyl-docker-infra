@@ -141,6 +141,8 @@ services:
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
       - GEMINI_MODEL=${GEMINI_MODEL:-gemini-2.5-pro}
       - PUBLIC_BASE_URL=${PUBLIC_BASE_URL:-http://localhost}
+      - LMS_SERVICE_URL=http://lms-service:8083
+      - SENTANYL_E2E_MODE=${SENTANYL_E2E_MODE:-0}
     depends_on:
       mongo:
         condition: service_healthy
