@@ -10,6 +10,12 @@
 	# LMS Service - Courses, Quizzes, Certificates
 	reverse_proxy /api/lms/* lms-service:8083
 
+	# Coaching Service - Programs, Sessions, Bookings, LiveKit, Calendly
+	reverse_proxy /api/coaching/* coaching-service:8086
+	reverse_proxy /api/customer/coaching/* coaching-service:8086
+	reverse_proxy /webhooks/calendly* coaching-service:8086
+	reverse_proxy /webhooks/livekit/* coaching-service:8086
+
 	# Marketing Service - Funnels, E-commerce, Email
 	reverse_proxy /api/marketing/* marketing-service:8082
 

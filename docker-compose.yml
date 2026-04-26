@@ -11,6 +11,8 @@ version: "3.8"
 #   8082  → marketing-service
 #   8083  → lms-service
 #   8084  → video-service
+#   8086  → coaching-service
+#   7880  → livekit-server (signaling)
 #   8025  → MailHog web UI
 #   27017 → MongoDB
 #   6379  → Redis
@@ -81,6 +83,7 @@ services:
       - marketing-service
       - lms-service
       - video-service
+      - coaching-service
       - frontend
     networks:
       - sentanyl
@@ -93,6 +96,8 @@ services:
     restart: unless-stopped
     ports:
       - "8081:8081"
+    volumes:
+      - ./sentanyl-gcs-key.json:/app/sentanyl-gcs-key.json:ro
     environment:
       - HTTP_PORT=8081
       - MONGO_HOST=mongo
@@ -107,6 +112,11 @@ services:
       - SMTP_PORT=1025
       - PUBLIC_BASE_URL=http://localhost
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - SENTANYL_E2E_MODE=${SENTANYL_E2E_MODE:-0}
+      - GCP_PROJECT_ID=${GCS_PROJECT_ID:-sendhero}
+      - GCS_BUCKET=${GCS_BUCKET:-sendhero-videos}
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/sentanyl-gcs-key.json
+      - PDF_SERVICE_URL=http://pdf-service:9774
     depends_on:
       mongo:
         condition: service_healthy
@@ -210,6 +220,91 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    networks:
+      - sentanyl
+
+  pdf-service:
+    build:
+      context: .
+      dockerfile: pdf-service/Dockerfile
+    container_name: sntl-pdf
+    restart: unless-stopped
+    expose:
+      - "9774"
+    networks:
+      - sentanyl
+
+  coaching-service:
+    build:
+      context: .
+      dockerfile: coaching-service/Dockerfile
+    container_name: sntl-coaching
+    restart: unless-stopped
+    ports:
+      - "8086:8086"
+    volumes:
+      - ./sentanyl-gcs-key.json:/app/sentanyl-gcs-key.json:ro
+    environment:
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/sentanyl-gcs-key.json
+      - GCP_PROJECT_ID=${GCS_PROJECT_ID:-sendhero}
+      - COACHING_SERVICE_PORT=8086
+      - MONGO_HOST=mongo
+      - MONGO_PORT=27017
+      - MONGO_DB=sentanyl_db
+      - MONGO_ENV=docker
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - SENTANYL_ENV=${SENTANYL_ENV:-local}
+      # LiveKit: defaults wire to the local livekit-server container.
+      # For staging/prod, override LIVEKIT_URL/HTTP_URL/KEY/SECRET in the
+      # host .env to point at LiveKit Cloud (wss://<project>.livekit.cloud)
+      # and remove the livekit-server service from the deployed compose.
+      - LIVEKIT_URL=${LIVEKIT_URL:-ws://livekit-server:7880}
+      - LIVEKIT_HTTP_URL=${LIVEKIT_HTTP_URL:-http://livekit-server:7880}
+      # Leave LIVEKIT_PUBLIC_URL unset by default. coaching-service falls
+      # back to LIVEKIT_URL — correct for LiveKit Cloud where browser and
+      # server hit the same wss:// URL. Override in .env for local dev when
+      # using the docker-compose livekit-server container.
+      - LIVEKIT_PUBLIC_URL=${LIVEKIT_PUBLIC_URL:-}
+      - LIVEKIT_API_KEY=${LIVEKIT_API_KEY:-devkey}
+      - LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET:-devsecretdevsecretdevsecret32ch}
+      # Egress (recording) — leave HMAC empty in local dev to skip; set in
+      # staging/prod so LiveKit Cloud Egress can drop recordings into GCS.
+      - GCS_S3_HMAC_KEY=${GCS_S3_HMAC_KEY:-}
+      - GCS_S3_HMAC_SECRET=${GCS_S3_HMAC_SECRET:-}
+      - CALENDLY_CLIENT_ID=${CALENDLY_CLIENT_ID:-}
+      - CALENDLY_CLIENT_SECRET=${CALENDLY_CLIENT_SECRET:-}
+      - CALENDLY_REDIRECT_URL=${CALENDLY_REDIRECT_URL:-http://localhost/webhooks/calendly/callback}
+      - CALENDLY_WEBHOOK_KEY=${CALENDLY_WEBHOOK_KEY:-}
+      - VIDEO_SERVICE_URL=http://video-service:8084
+      - GCP_PROJECT_ID=${GCS_PROJECT_ID:-sendhero}
+      - GCS_BUCKET=${GCS_BUCKET:-sendhero-videos}
+      - SMTP_HOST=mailhog
+      - SMTP_PORT=1025
+      - PUBLIC_BASE_URL=${PUBLIC_BASE_URL:-http://localhost}
+    depends_on:
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - sentanyl
+
+  # Local dev only. Activate with `docker compose --profile dev-livekit up`
+  # or by setting COMPOSE_PROFILES=dev-livekit. Omit on staging/prod where
+  # LIVEKIT_URL points at LiveKit Cloud.
+  livekit-server:
+    image: livekit/livekit-server:latest
+    container_name: sntl-livekit
+    restart: unless-stopped
+    profiles: ["dev-livekit"]
+    command: --dev --bind 0.0.0.0
+    environment:
+      - "LIVEKIT_KEYS=${LIVEKIT_API_KEY:-devkey}: ${LIVEKIT_API_SECRET:-devsecretdevsecretdevsecret32ch}"
+    ports:
+      - "7880:7880"
+      - "7881:7881"
+      - "7882:7882/udp"
     networks:
       - sentanyl
 

@@ -62,6 +62,7 @@ services:
       - marketing-service
       - lms-service
       - video-service
+      - coaching-service
     networks:
       - sentanyl
 
@@ -182,6 +183,63 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    networks:
+      - sentanyl
+
+  coaching-service:
+    image: golang:1.25
+    container_name: sntl-coaching-hot
+    restart: unless-stopped
+    ports:
+      - "8086:8086"
+    volumes:
+      - .:/workspace
+    working_dir: /workspace
+    environment:
+      - COACHING_SERVICE_PORT=8086
+      - MONGO_HOST=mongo
+      - MONGO_PORT=27017
+      - MONGO_DB=sentanyl_db
+      - MONGO_ENV=docker
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - SENTANYL_ENV=${SENTANYL_ENV:-local}
+      - LIVEKIT_URL=${LIVEKIT_URL:-ws://livekit-server:7880}
+      - LIVEKIT_HTTP_URL=${LIVEKIT_HTTP_URL:-http://livekit-server:7880}
+      - LIVEKIT_PUBLIC_URL=${LIVEKIT_PUBLIC_URL:-ws://localhost:7880}
+      - LIVEKIT_API_KEY=${LIVEKIT_API_KEY:-devkey}
+      - LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET:-devsecretdevsecretdevsecret32ch}
+      - GCS_S3_HMAC_KEY=${GCS_S3_HMAC_KEY:-}
+      - GCS_S3_HMAC_SECRET=${GCS_S3_HMAC_SECRET:-}
+      - VIDEO_SERVICE_URL=http://video-service:8084
+      - SMTP_HOST=mailhog
+      - SMTP_PORT=1025
+      - PUBLIC_BASE_URL=${PUBLIC_BASE_URL:-http://localhost}
+      - CALENDLY_CLIENT_ID=${CALENDLY_CLIENT_ID:-}
+      - CALENDLY_CLIENT_SECRET=${CALENDLY_CLIENT_SECRET:-}
+      - CALENDLY_REDIRECT_URL=${CALENDLY_REDIRECT_URL:-http://localhost/webhooks/calendly/callback}
+      - CALENDLY_WEBHOOK_KEY=${CALENDLY_WEBHOOK_KEY:-}
+    command: go run ./coaching-service/cmd/...
+    depends_on:
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - sentanyl
+
+  livekit-server:
+    image: livekit/livekit-server:latest
+    container_name: sntl-livekit-hot
+    profiles: ["dev-livekit"]
+    restart: unless-stopped
+    command: --dev --bind 0.0.0.0
+    environment:
+      - "LIVEKIT_KEYS=${LIVEKIT_API_KEY:-devkey}: ${LIVEKIT_API_SECRET:-devsecretdevsecretdevsecret32ch}"
+    ports:
+      - "7880:7880"
+      - "7881:7881"
+      - "7882:7882/udp"
     networks:
       - sentanyl
 
