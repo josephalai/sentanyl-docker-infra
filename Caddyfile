@@ -28,8 +28,14 @@
 	reverse_proxy /api/tenant/assets* marketing-service:8082
 	reverse_proxy /api/tenant/contacts* marketing-service:8082
 	reverse_proxy /api/tenant/sites* marketing-service:8082
+	reverse_proxy /api/tenant/services* marketing-service:8082
+	reverse_proxy /api/tenant/newsletters* marketing-service:8082
 	reverse_proxy /api/tenant/forms* marketing-service:8082
 	reverse_proxy /api/tenant/email-ai* marketing-service:8082
+	reverse_proxy /api/tenant/inbox* marketing-service:8082
+	reverse_proxy /api/tenant/inbox-agents* marketing-service:8082
+	reverse_proxy /api/tenant/business-brain* marketing-service:8082
+	reverse_proxy /api/tenant/sales-playbooks* marketing-service:8082
 	reverse_proxy /api/tenant/funnel-ai* marketing-service:8082
 	reverse_proxy /api/tenant/site-themes* marketing-service:8082
 

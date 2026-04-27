@@ -133,6 +133,8 @@ services:
     restart: unless-stopped
     ports:
       - "8082:8082"
+    volumes:
+      - ./sentanyl-gcs-key.json:/app/sentanyl-gcs-key.json:ro
     environment:
       - HTTP_PORT=8082
       - MONGO_HOST=mongo
@@ -153,6 +155,9 @@ services:
       - PUBLIC_BASE_URL=${PUBLIC_BASE_URL:-http://localhost}
       - LMS_SERVICE_URL=http://lms-service:8083
       - SENTANYL_E2E_MODE=${SENTANYL_E2E_MODE:-0}
+      - GCP_PROJECT_ID=${GCS_PROJECT_ID:-sendhero}
+      - GCS_BUCKET=${GCS_BUCKET:-sendhero-videos}
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/sentanyl-gcs-key.json
     depends_on:
       mongo:
         condition: service_healthy
