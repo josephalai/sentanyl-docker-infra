@@ -158,6 +158,7 @@ services:
       - GCP_PROJECT_ID=${GCS_PROJECT_ID:-sendhero}
       - GCS_BUCKET=${GCS_BUCKET:-sendhero-videos}
       - GOOGLE_APPLICATION_CREDENTIALS=/app/sentanyl-gcs-key.json
+      - CLONE_SANDBOX_URL=http://site-sandbox:9001
     depends_on:
       mongo:
         condition: service_healthy
@@ -165,6 +166,23 @@ services:
         condition: service_healthy
       mailhog:
         condition: service_started
+    networks:
+      - sentanyl
+
+  site-sandbox:
+    build:
+      context: ./site-sandbox
+      dockerfile: Dockerfile
+    container_name: sntl-site-sandbox
+    restart: unless-stopped
+    expose:
+      - "9001"
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://localhost:9001/health', r => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))\""]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 30s
     networks:
       - sentanyl
 
