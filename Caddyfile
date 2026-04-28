@@ -38,6 +38,7 @@
 	reverse_proxy /api/tenant/sales-playbooks* marketing-service:8082
 	reverse_proxy /api/tenant/funnel-ai* marketing-service:8082
 	reverse_proxy /api/tenant/site-themes* marketing-service:8082
+	reverse_proxy /view/sites* marketing-service:8082
 
 	# Customer auth lives in core-service (alongside tenant auth + domain resolution).
 	reverse_proxy /api/customer/login core-service:8081
