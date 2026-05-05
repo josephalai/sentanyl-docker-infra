@@ -32,6 +32,8 @@
 	reverse_proxy /api/tenant/newsletters* marketing-service:8082
 	reverse_proxy /api/tenant/forms* marketing-service:8082
 	reverse_proxy /api/tenant/email-ai* marketing-service:8082
+	reverse_proxy /api/tenant/campaigns* marketing-service:8082
+	reverse_proxy /api/marketing/campaigns* marketing-service:8082
 	reverse_proxy /api/tenant/inbox* marketing-service:8082
 	reverse_proxy /api/tenant/inbox-agents* marketing-service:8082
 	reverse_proxy /api/tenant/business-brain* marketing-service:8082
